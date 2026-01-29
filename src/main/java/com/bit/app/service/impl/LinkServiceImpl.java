@@ -10,24 +10,27 @@ import org.springframework.stereotype.Service;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class ILinkService implements LinkService {
+public class LinkServiceImpl implements LinkService {
     private final LinkRepository linkRepository;
     private static final String BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     @Override
-    public String redirectURL(String shortCode) {
+    public String getOriginalUrl(String shortCode) {
         Link link = linkRepository.findUrlByShortCode(shortCode);
+        if (link == null)
+            return "";
         return link.getUrl();
     }
 
     @Override
-    public void shorten(String url) {
+    public String shorten(String url) {
         Link link = new Link();
         link.setUrl(url);
         link.setShortCode("");
         link = linkRepository.save(link);
         String code = encode(link.getId());
         link.setShortCode(code);
+        return code;
     }
 
     private String encode(long id) {

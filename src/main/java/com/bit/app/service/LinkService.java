@@ -1,6 +1,6 @@
 package com.bit.app.service;
 
 public interface LinkService {
-    String redirectURL(String shortCode);
-    void shorten(String url);
+    String getOriginalUrl(String shortCode);
+    String shorten(String url);
 }
