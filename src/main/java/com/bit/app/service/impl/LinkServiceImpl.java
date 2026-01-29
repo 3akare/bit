@@ -16,7 +16,7 @@ public class LinkServiceImpl implements LinkService {
 
     @Override
     public String getOriginalUrl(String shortCode) {
-        Link link = linkRepository.findUrlByShortCode(shortCode);
+        Link link = linkRepository.findByShortCode(shortCode);
         if (link == null)
             return "";
         return link.getUrl();
