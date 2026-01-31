@@ -9,21 +9,33 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Redirection", description = "Redirects short codes to original URLs")
 public class RedirectController {
     private final LinkService linkService;
 
     @Value("${app.base-url:https://3akare.vercel.app}")
     private String fallbackUrl;
 
-    @GetMapping("/{shortCode}")
+    @Operation(summary = "Redirect to original URL", description = "Redirects the user to the original URL associated with the short code. If not found, redirects to fallback URL.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "302", description = "Found and redirecting"),
+            @ApiResponse(responseCode = "404", description = "Link not found (redirects to fallback)")
+    })
+    @GetMapping("/{shortCode:[^.]+}")
     public ResponseEntity<Void> redirect(@PathVariable String shortCode) {
         String url = linkService.getUrl(shortCode);
 
         if (url != null) {
             linkService.incrementClick(shortCode);
-            if (!url.startsWith("http")) url = "https://" + url;
+            if (!url.startsWith("http"))
+                url = "https://" + url;
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(URI.create(url))
                     .build();

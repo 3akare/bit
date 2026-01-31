@@ -23,3 +23,9 @@ spring:
 
 app:
   base-url: ${BASE_URL:https://3akare.vercel.app}
+
+scalar:
+  openapi:
+    url: '/v3/api-docs'
+  endpoint: '/docs'
+  theme: 'purple'
