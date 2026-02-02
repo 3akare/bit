@@ -17,7 +17,10 @@ public interface LinkRepository extends JpaRepository<Link, UUID> {
 
     boolean existsByShortCode(String shortCode);
 
-    @Query("SELECT l FROM Link l WHERE (l.shortCode = :code OR l.alias = :code) " + "AND (l.expiresAt IS NULL OR l.expiresAt > :now)")
+    Optional<Link> findByShortCodeOrAlias(String shortCode, String alias);
+
+    @Query("SELECT l FROM Link l WHERE (l.shortCode = :code OR l.alias = :code) "
+            + "AND (l.expiresAt IS NULL OR l.expiresAt > :now)")
     Optional<Link> findValidLink(String code, Instant now);
 
     @Modifying

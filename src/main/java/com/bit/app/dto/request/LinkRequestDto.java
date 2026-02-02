@@ -14,7 +14,7 @@ import java.time.Instant;
 public class LinkRequestDto {
     @JsonProperty("link_url")
     @NotBlank(message = "link_url is required")
-    @Pattern(regexp = "^(https?://)?([\\da-z.-]+)\\.([a-z.]{2,6})([/\\w .-]*)*/?$", message = "Please enter a valid URL or domain")
+    @Pattern(regexp = "^(https?://)?([\\da-z.-]+)\\.([a-z.]{2,6})([/\\w .-]*)*/?(\\?.*)?$", message = "Please enter a valid URL or domain")
     @Schema(description = "The original long URL to be shortened", example = "https://www.google.com")
     private String linkUrl;
 

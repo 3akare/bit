@@ -23,6 +23,7 @@ import java.util.UUID;
 public class LinkServiceImpl implements LinkService {
     private final LinkRepository linkRepository;
     private final StringRedisTemplate redisTemplate;
+    private final com.bit.app.service.AnalyticsService analyticsService;
     private static final String CACHE_PREFIX = "links:";
 
     @Override
@@ -30,11 +31,12 @@ public class LinkServiceImpl implements LinkService {
         String cacheKey = CACHE_PREFIX + code;
 
         String cachedUrl = redisTemplate.opsForValue().get(cacheKey);
-        if (cachedUrl != null) return cachedUrl;
+        if (cachedUrl != null)
+            return cachedUrl;
 
         return linkRepository.findValidLink(code, Instant.now())
                 .map(link -> {
-                    if (link.getExpiresAt() != null){
+                    if (link.getExpiresAt() != null) {
                         long secondsToLive = Duration.between(Instant.now(), link.getExpiresAt()).getSeconds();
                         if (secondsToLive > 0) {
                             redisTemplate.opsForValue().set(cacheKey, link.getUrl(), Duration.ofSeconds(secondsToLive));
@@ -51,6 +53,9 @@ public class LinkServiceImpl implements LinkService {
     @Async
     public void incrementClick(String code) {
         linkRepository.incrementClickCount(code);
+        linkRepository.findByShortCodeOrAlias(code, code)
+                .ifPresent(link -> analyticsService.notifyClick(link.getShortCode(), link.getAlias(),
+                        link.getClickCount()));
     }
 
     @Override

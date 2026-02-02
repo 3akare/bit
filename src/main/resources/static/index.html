@@ -4,103 +4,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Core Redirector</title>
+    <title>Bit | URL Shortener</title>
     <link rel="stylesheet" href="style.css">
+    <!-- SVG Service for Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
 
-    <div class="container">
-        <h1>Core Redirector</h1>
-        <p class="subtitle">Enter a long URL to create a short link.</p>
+    <div class="app-container">
+        <header>
+            <div class="logo">Bit</div>
+        </header>
 
-        <div class="input-group">
-            <input type="url" id="longUrl" placeholder="https://example.com/very/long/url..." required>
-            <div id="errorMsg" class="error">Please enter a valid URL.</div>
-        </div>
+        <main>
+            <!-- Create Section -->
+            <section class="card create-section">
+                <h2>Shorten a Link</h2>
+                <form id="shortenForm">
+                    <div class="input-group">
+                        <label for="longUrl">Destination URL</label>
+                        <input type="url" id="longUrl" placeholder="https://example.com/my-long-link" required>
+                    </div>
 
-        <button id="shortenBtn" onclick="shortenUrl()">Shorten URL</button>
+                    <div class="input-group">
+                        <label for="alias">Custom Alias (Optional)</label>
+                        <input type="text" id="alias" placeholder="e.g. summer-sale">
+                    </div>
 
-        <div id="result">
-            <p>Your simplified link is ready:</p>
-            <a href="#" id="shortLink" target="_blank"></a>
-        </div>
+                    <button type="submit" class="btn-primary" id="shortenBtn">
+                        Create Short Link
+                    </button>
+                </form>
 
-        <div class="footer">
-            Simple & Fast URL Shortening
-        </div>
+                <div id="resultDisplay" class="result-display">
+                    <span id="createdLink" class="result-link"></span>
+                    <button class="copy-btn" id="copyResultBtn" title="Copy to clipboard">
+                        <i data-lucide="copy"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Dashboard Section -->
+            <section class="card dashboard-section">
+                <h2>Your Links</h2>
+                <div class="table-container">
+                    <table id="linksTable">
+                        <thead>
+                            <tr>
+                                <th>Short Link</th>
+                                <th>Original URL</th>
+                                <th>Redirects</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="linksBody">
+                            <!-- Rows will be added here -->
+                        </tbody>
+                    </table>
+                    <div id="emptyState"
+                        style="text-align: center; padding: 2rem; color: var(--text-muted); display: none;">
+                        No links created yet.
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script>
-        async function shortenUrl() {
-            const urlInput = document.getElementById('longUrl');
-            const resultDiv = document.getElementById('result');
-            const shortLink = document.getElementById('shortLink');
-            const errorMsg = document.getElementById('errorMsg');
-            const btn = document.getElementById('shortenBtn');
+        // Init Lucide Icons
+        lucide.createIcons();
 
-            const url = urlInput.value.trim();
+        // State
+        const links = JSON.parse(localStorage.getItem('bit_links') || '[]');
 
-            // Basic Client-side Validation
-            if (!url) {
-                showError('Please enter a URL.');
-                return;
+        // DOM Elements
+        const form = document.getElementById('shortenForm');
+        const linksBody = document.getElementById('linksBody');
+        const resultDisplay = document.getElementById('resultDisplay');
+        const createdLinkSpan = document.getElementById('createdLink');
+        const copyResultBtn = document.getElementById('copyResultBtn');
+        const emptyState = document.getElementById('emptyState');
+
+        // Render Initial Table
+        renderTable();
+
+        // SSE Connection
+        const eventSource = new EventSource('/api/v1/analytics/stream');
+
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            // data: { shortCode, alias, clickCount }
+
+            // Update local state if we have this link
+            const linkIndex = links.findIndex(l => l.shortCode === data.shortCode || l.alias === data.alias);
+
+            if (linkIndex !== -1) {
+                links[linkIndex].clicks = data.clickCount;
+                saveLinks(); // Persist updated count
+                updateRow(links[linkIndex]);
             }
+        };
 
-            // Reset UI
-            errorMsg.classList.remove('visible');
-            urlInput.classList.remove('invalid');
-            resultDiv.style.display = 'none';
+        eventSource.addEventListener('click-update', (event) => {
+            const data = JSON.parse(event.data);
+            const linkIndex = links.findIndex(l => l.shortCode === data.shortCode || (data.alias && l.alias === data.alias));
+            if (linkIndex !== -1) {
+                links[linkIndex].clicks = data.clickCount;
+                saveLinks();
+                updateRow(links[linkIndex]);
+            }
+        });
+
+        // Form Submit
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('shortenBtn');
+            const originalUrl = document.getElementById('longUrl').value;
+            const alias = document.getElementById('alias').value;
+
             btn.disabled = true;
-            btn.textContent = 'Shortening...';
+            btn.textContent = 'Creating...';
 
             try {
-                const response = await fetch('/api/v1/shorten', {
+                const res = await fetch('/api/v1/shorten', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ url: url })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ link_url: originalUrl, alias: alias || null })
+
                 });
 
-                if (response.ok) {
-                    const shortCode = await response.text();
-                    const fullShortUrl = `${window.location.origin}/api/v1/${shortCode}`;
+                if (res.ok) {
+                    const data = await res.json(); // { data: { shortCode, alias, ... } }
+                    const linkData = data.data; // adjust based on API response structure
 
-                    shortLink.href = fullShortUrl;
-                    shortLink.textContent = fullShortUrl;
-                    resultDiv.style.display = 'block';
+                    const fullUrl = `${window.location.origin}/${linkData.shortCode}`;
 
-                    // Clear input on success
-                    urlInput.value = '';
+                    // Show Result
+                    createdLinkSpan.textContent = fullUrl;
+                    resultDisplay.classList.add('active');
+
+                    // Add to Local List
+                    const newLink = {
+                        shortCode: linkData.shortCode,
+                        alias: linkData.alias,
+                        originalUrl: originalUrl,
+                        fullUrl: fullUrl,
+                        clicks: 0,
+                        createdAt: Date.now()
+                    };
+
+                    links.unshift(newLink);
+                    saveLinks();
+                    renderTable();
+
+                    form.reset();
                 } else {
-                    showError('Failed to shorten. Please ensure the URL is valid.');
+                    alert('Error creating link');
                 }
             } catch (err) {
                 console.error(err);
-                showError('Network error. Please try again.');
+                alert('Network error');
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Shorten URL';
-            }
-        }
-
-        function showError(msg) {
-            const errorMsg = document.getElementById('errorMsg');
-            const urlInput = document.getElementById('longUrl');
-            errorMsg.textContent = msg;
-            errorMsg.classList.add('visible');
-            urlInput.classList.add('invalid');
-        }
-
-        // Allow pressing Enter to submit
-        document.getElementById('longUrl').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                shortenUrl();
+                btn.textContent = 'Create Short Link';
             }
         });
-    </script>
 
+        // Copy Button Logic
+        copyResultBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(createdLinkSpan.textContent);
+            const originalIcon = copyResultBtn.innerHTML;
+            copyResultBtn.innerHTML = '<i data-lucide="check"></i>';
+            lucide.createIcons();
+            setTimeout(() => {
+                copyResultBtn.innerHTML = '<i data-lucide="copy"></i>';
+                lucide.createIcons();
+            }, 2000);
+        });
+
+        function saveLinks() {
+            localStorage.setItem('bit_links', JSON.stringify(links));
+        }
+
+        function renderTable() {
+            linksBody.innerHTML = '';
+            if (links.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+            emptyState.style.display = 'none';
+            links.forEach(link => {
+                const row = document.createElement('tr');
+                row.id = `row-${link.shortCode}`;
+                row.innerHTML = `
+                    <td>
+                        <a href="${link.fullUrl}" target="_blank" class="short-link">
+                            /${link.alias || link.shortCode}
+                        </a>
+                    </td>
+                    <td><span class="original-url">${link.originalUrl}</span></td>
+                    <td><span class="redirect-count" id="count-${link.shortCode}">${link.clicks}</span></td>
+                    <td>
+                        <button class="copy-btn" onclick="copyLink('${link.fullUrl}')">
+                            <i data-lucide="copy"></i>
+                        </button>
+                    </td>
+                `;
+                linksBody.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        function updateRow(link) {
+            const countEl = document.getElementById(`count-${link.shortCode}`);
+            if (countEl) {
+                countEl.textContent = link.clicks;
+                countEl.classList.add('pulse');
+                setTimeout(() => countEl.classList.remove('pulse'), 1000);
+            }
+        }
+
+        window.copyLink = (text) => {
+            navigator.clipboard.writeText(text);
+        };
+
+    </script>
 </body>
 
 </html>
