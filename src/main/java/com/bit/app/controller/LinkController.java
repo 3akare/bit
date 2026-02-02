@@ -1,6 +1,7 @@
 package com.bit.app.controller;
 
 import com.bit.app.dto.request.LinkRequestDto;
+import com.bit.app.dto.response.DefaultApiResponse;
 import com.bit.app.dto.response.LinkResponseDto;
 import com.bit.app.service.LinkService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,7 +30,7 @@ public class LinkController {
             @ApiResponse(responseCode = "400", description = "Invalid input or alias already exists", content = @Content)
     })
     @PostMapping("/shorten")
-    public ResponseEntity<com.bit.app.dto.response.ApiResponse<LinkResponseDto>> encode(
+    public ResponseEntity<DefaultApiResponse<LinkResponseDto>> encode(
             @RequestBody @Valid LinkRequestDto request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(linkService.encode(

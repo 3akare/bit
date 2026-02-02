@@ -1,6 +1,6 @@
 package com.bit.app.service.impl;
 
-import com.bit.app.dto.response.ApiResponse;
+import com.bit.app.dto.response.DefaultApiResponse;
 import com.bit.app.dto.response.LinkResponseDto;
 import com.bit.app.entity.Link;
 import com.bit.app.repository.LinkRepository;
@@ -55,7 +55,7 @@ public class LinkServiceImpl implements LinkService {
 
     @Override
     @Transactional
-    public ApiResponse<LinkResponseDto> encode(String url, String alias, Instant expiresAt) {
+    public DefaultApiResponse<LinkResponseDto> encode(String url, String alias, Instant expiresAt) {
         String finalShortCode;
         int retryCount = 0;
 
@@ -77,7 +77,7 @@ public class LinkServiceImpl implements LinkService {
 
         linkRepository.save(link);
 
-        return ApiResponse.<LinkResponseDto>builder()
+        return DefaultApiResponse.<LinkResponseDto>builder()
                 .statusCode(HttpStatus.CREATED.value())
                 .stateMessage("Success")
                 .data(new LinkResponseDto(url, alias, finalShortCode, expiresAt))

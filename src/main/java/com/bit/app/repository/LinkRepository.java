@@ -13,13 +13,11 @@ import java.util.UUID;
 
 @Repository
 public interface LinkRepository extends JpaRepository<Link, UUID> {
-
     boolean existsByAlias(String alias);
+
     boolean existsByShortCode(String shortCode);
 
-    // Optimized for "Find valid link" (Checks expiration + Code match)
-    @Query("SELECT l FROM Link l WHERE (l.shortCode = :code OR l.alias = :code) " +
-            "AND (l.expiresAt IS NULL OR l.expiresAt > :now)")
+    @Query("SELECT l FROM Link l WHERE (l.shortCode = :code OR l.alias = :code) " + "AND (l.expiresAt IS NULL OR l.expiresAt > :now)")
     Optional<Link> findValidLink(String code, Instant now);
 
     @Modifying

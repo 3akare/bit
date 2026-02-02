@@ -20,7 +20,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 public class RedirectController {
     private final LinkService linkService;
 
-    @Value("${app.base-url:https://3akare.vercel.app}")
+    @Value("${app.base-url}")
     private String fallbackUrl;
 
     @Operation(summary = "Redirect to original URL", description = "Redirects the user to the original URL associated with the short code. If not found, redirects to fallback URL.")
