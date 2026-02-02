@@ -1,0 +1,7 @@
+# .dockerignore
+target/
+*.log
+*.iml
+.idea/
+.mvn/repository/
+*.class
